@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Brax Upload Method - TikTok Optimizer",
+  "version": "0.1.0",
+  "description": "Analyze and optimize your videos before uploading to TikTok. Get real-time recommendations for resolution, fps, codec and automatic conversion to best quality settings.",
+  "author": "Brax Studio",
+  "permissions": ["storage", "scripting", "downloads"],
+  "host_permissions": [
+    "*://*.tiktok.com/*",
+    "http://localhost:4000/*",
+    "http://127.0.0.1:4000/*",
+    "https://tiktokvideooptimizer.com/*",
+    "https://api.tiktokvideooptimizer.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.tiktok.com/*"],
+      "js": ["src/config.js", "src/contentScript.js"],
+      "css": ["src/contentStyle.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon-48.svg", "icons/icon-128.svg"],
+      "matches": ["*://*.tiktok.com/*"]
+    }
+  ],
+  "action": {
+    "default_title": "Brax Upload Method - Optimize Your Video"
+  },
+  "icons": {
+    "16": "icons/icon-16.svg",
+    "32": "icons/icon-32.svg",
+    "48": "icons/icon-48.svg",
+    "128": "icons/icon-128.svg"
+  }
+}

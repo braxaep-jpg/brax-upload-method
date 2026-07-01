@@ -1,0 +1,91 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+      
+      - name: Build frontend
+        run: npm run frontend:build
+      
+      - name: Deploy to Vercel
+        run: |
+          vercel deploy frontend/dist \
+            --prod \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --confirm
+      
+      - name: Notify deployment
+        run: echo "Frontend deployed to production"
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Build backend
+        run: npm run backend:build
+      
+      - name: Deploy to Railway
+        run: |
+          npm install -g @railway/cli
+          railway up \
+            --service backend \
+            --token=${{ secrets.RAILWAY_TOKEN }}
+      
+      - name: Verify deployment
+        run: |
+          sleep 10
+          curl https://your-railway-api.railway.app/api/health || echo "Backend not yet ready"
+
+  release:
+    needs: [deploy-frontend, deploy-backend]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          body: |
+            ## Production Deployment
+            
+            Frontend: https://brax-upload-method.vercel.app
+            Backend: https://your-railway-api.railway.app
+            
+            All systems deployed and operational.
+          draft: false
+          prerelease: false

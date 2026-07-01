@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <style>
+      .bg { fill: #000; }
+      .icon { fill: #fff; }
+    </style>
+  </defs>
+  <rect class="bg" width="128" height="128" rx="20"/>
+  <g class="icon">
+    <!-- Play button -->
+    <path d="M40 32 L96 64 L40 96 Z"/>
+    <!-- Optimization arrow -->
+    <path d="M64 104 L64 120 M58 114 L64 120 L70 114" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

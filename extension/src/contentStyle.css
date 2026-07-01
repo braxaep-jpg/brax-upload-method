@@ -1,0 +1,137 @@
+#brax-bottom-badge {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100000;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(3, 18, 40, 0.9);
+  border: 1px solid rgba(30, 215, 210, 0.24);
+  border-radius: 999px;
+  box-shadow: 0 24px 60px rgba(5, 15, 40, 0.38);
+  color: #fff;
+  font-family: Inter, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
+  opacity: 0.98;
+}
+
+#brax-bottom-badge:hover {
+  transform: translateY(-2px);
+  opacity: 1;
+  box-shadow: 0 30px 78px rgba(5, 16, 50, 0.45);
+}
+
+#brax-bottom-badge img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+#brax-upload-overlay {
+  position: absolute;
+  z-index: 100000;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 300px;
+  min-height: 140px;
+  padding: 22px;
+  background: rgba(8, 16, 38, 0.96);
+  border: 1px solid rgba(20, 220, 255, 0.14);
+  border-radius: 30px;
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+  font-family: Inter, 'Segoe UI', sans-serif;
+  overflow: hidden;
+  backdrop-filter: blur(18px);
+  transition: transform 220ms ease, opacity 220ms ease;
+  opacity: 0.98;
+}
+
+#brax-upload-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(0, 222, 255, 0.18), transparent 35%),
+              radial-gradient(circle at bottom right, rgba(41, 134, 255, 0.16), transparent 30%);
+  pointer-events: none;
+}
+
+#brax-upload-overlay::after {
+  content: '';
+  position: absolute;
+  left: -20%;
+  top: 50%;
+  width: 140%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0, 232, 255, 0.45), transparent);
+  transform: translateY(-50%) rotate(3deg);
+  opacity: 0.75;
+  animation: brax-sweep 2.7s infinite ease-in-out;
+}
+
+#brax-upload-overlay .brax-overlay-content {
+  position: relative;
+  text-align: center;
+  max-width: 320px;
+  z-index: 1;
+}
+
+#brax-upload-overlay .brax-overlay-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+#brax-upload-overlay .brax-overlay-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+#brax-upload-overlay .brax-upload-spinner {
+  display: inline-flex;
+  gap: 10px;
+  margin-top: 14px;
+  justify-content: center;
+}
+
+.brax-upload-spinner-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #18ffe2, #007bff);
+  box-shadow: 0 0 16px rgba(0, 215, 255, 0.4);
+  animation: brax-pulse 1s infinite ease-in-out;
+}
+
+.brax-upload-spinner-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.brax-upload-spinner-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes brax-pulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes brax-sweep {
+  0% { transform: translate(-50%, -50%) rotate(3deg); opacity: 0; }
+  35% { opacity: 0.75; }
+  100% { transform: translate(100%, -50%) rotate(3deg); opacity: 0; }
+}
