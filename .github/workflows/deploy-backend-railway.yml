@@ -16,14 +16,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm install
 
       - name: Build backend
-        run: npm --workspace backend run build
+        run: cd backend && npm run build
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
@@ -33,7 +33,7 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           railway login --token "$RAILWAY_TOKEN"
-          railway up --service backend --yes
+          railway up --service brax-upload-method-backend --yes
 
       - name: Verify backend health
         run: |
