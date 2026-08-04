@@ -45,10 +45,23 @@
 
 ## Публичный сайт
 
-- Фронтенд: `https://tiktokvideooptimizer.com`
-- API: `https://api.tiktokvideooptimizer.com`
+- Фронтенд: `https://braxaep-jpg.github.io/brax-upload-method/`
+- API: `https://your-backend-host.example.com`
 
-> Для публикации сайта нужно подключить эти домены в Vercel и Railway/Render, а также настроить DNS для доменов.
+> Для публикации фронтенда используется GitHub Pages. Для публикации backend нужно настроить Railway или Render и подключить API-домен.
+
+## Публичный backend
+
+Для публичного backend я подготовил готовый GitHub Actions workflow на Railway. Вам нужно:
+
+1. Зарегистрироваться на Railway бесплатно.
+2. Создать Railway Token в настройках аккаунта.
+3. В GitHub репозитории добавить секрет `RAILWAY_TOKEN`.
+4. В `.github/workflows/deploy-backend-railway.yml` будет настроен deploy при пуше в `main`.
+
+После этого backend будет доступен по домену Railway, например `https://<your-railway-service>.railway.app`.
+
+> Если хотите, можете использовать Render вместо Railway, но для этого потребуется отдельная настройка service и API key.
 
 ## Руководство пользователя
 

@@ -30,7 +30,8 @@ const allowedOrigins = [
   'http://localhost:4000',
   'https://braxuploadmethod.com',
   'https://tiktokvideooptimizer.com',
-  'https://api.tiktokvideooptimizer.com'
+  'https://api.tiktokvideooptimizer.com',
+  'https://braxaep-jpg.github.io'
 ];
 
 app.use(cors({
