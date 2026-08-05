@@ -46,9 +46,9 @@
 ## Публичный сайт
 
 - Фронтенд: `https://braxaep-jpg.github.io/brax-upload-method/`
-- API: `https://your-backend-host.example.com`
+- API: `https://brax-upload-method-backend-production.up.railway.app`
 
-> Для публикации фронтенда используется GitHub Pages. Для публикации backend нужно настроить Railway или Render и подключить API-домен.
+> Для публикации фронтенда используется GitHub Pages. Backend уже доступен на Railway по этому URL.
 
 ## Публичный backend
 
