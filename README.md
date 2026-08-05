@@ -46,11 +46,20 @@
 ## Публичный сайт
 
 - Фронтенд: `https://braxaep-jpg.github.io/brax-upload-method/`
-- API: `https://your-backend-host.example.com`
+- API Backend: `https://brax-upload-method-backend-production.up.railway.app`
 
-> Для публикации фронтенда используется GitHub Pages. Для публикации backend нужно настроить Railway или Render и подключить API-домен.
+> Фронтенд опубликован на GitHub Pages. Backend развёрнут на Railway с автоматическим CI/CD при пуше в `main`.
 
 ## Публичный backend
+Backend автоматически развёртывается на Railway через GitHub Actions workflow:
+
+1. При каждом пуше в `main` запускается `.github/workflows/deploy-backend-railway.yml`
+2. Workflow использует `RAILWAY_TOKEN` из GitHub Secrets
+3. Сервис `brax-upload-method-backend` автоматически обновляется и переразвёртывается
+
+**Backend URL**: `https://brax-upload-method-backend-production.up.railway.app`
+
+Health check endpoint: `https://brax-upload-method-backend-production.up.railway.app/api/health`
 
 Для публичного backend я подготовил готовый GitHub Actions workflow на Railway. Вам нужно:
 
