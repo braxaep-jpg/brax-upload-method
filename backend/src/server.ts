@@ -29,8 +29,6 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:4000',
   'https://braxuploadmethod.com',
-  'https://tiktokvideooptimizer.com',
-  'https://api.tiktokvideooptimizer.com',
   'https://braxaep-jpg.github.io'
 ];
 
