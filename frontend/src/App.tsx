@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './index.css';
-import { API_BASE_URL, SITE_URL } from './config';
+import { API_BASE_URL } from './config';
 
 interface AnalysisResult {
   format: string;
@@ -130,82 +130,61 @@ export default function App() {
   };
 
   return (
-    <>
-      <header className="header">
-        <div className="header-content">
-          <div className="logo-section">
-            <div>
-              <h1 className="logo">TikTok Video Optimizer</h1>
-              <p className="tagline">Video quality workspace</p>
+    <div className="app-shell">
+      <video
+        className="background-video"
+        autoPlay
+        muted
+        loop
+        playsInline
+        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260508_215831_c6a8989c-d716-4d8d-8745-e972a2eec711.mp4"
+      />
+      <div className="video-overlay" />
+      <div className="page-content">
+        <nav className="top-nav" aria-label="Основная навигация">
+          <div className="brand-pill">
+            <span className="brand-mark">B</span>
+            <span className="brand-name">BRA<span>X</span></span>
+          </div>
+          <div className="nav-pill">
+            <a href="#workspace" className="nav-link active">Workspace</a>
+            <a href="#tools" className="nav-link">Tools</a>
+            <a href="#results" className="nav-link">Results</a>
+            <a href="#about" className="nav-link">About</a>
+          </div>
+        </nav>
+
+        <main className="hero-layout" id="workspace">
+          <div className="hero-copy">
+            <a href="#tools" className="eyebrow-link">VIDEO QUALITY, REFINED <span>→</span></a>
+            <h1>Make every frame<br />look <em>intentional.</em></h1>
+            <p>Prepare your video for TikTok with a cleaner workflow, smoother motion and confident quality.</p>
+            <div className="hero-stats">
+              <div><strong>01</strong><span>Analyze</span></div>
+              <div><strong>02</strong><span>Enhance</span></div>
+              <div><strong>03</strong><span>Publish</span></div>
             </div>
-            <nav className="site-nav" aria-label="Основная навигация">
-              <a href="#workspace" className="site-nav-link active">Workspace</a>
-              <a href="#results" className="site-nav-link">Results</a>
-              <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="nav-login">Open site</a>
-            </nav>
           </div>
-        </div>
-      </header>
 
-      <main className="container">
-        <div className="hero-section" id="workspace">
-          <h2>Подготовь видео к публикации</h2>
-          <p>Анализируем параметры видео и оптимизируем их для лучшего качества на TikTok, чтобы публикации выглядели аккуратно и профессионально.</p>
-          <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="social-link" style={{ marginTop: '12px', display: 'inline-flex' }}>
-            Перейти к публичной странице
-          </a>
-        </div>
-
-        <div className="upload-section">
-          <div className="file-input-wrapper">
-            <label htmlFor="file-input" className="file-label">
-              <span className="file-icon" aria-hidden="true">+</span>
-              <span className="file-text">Выбери видео или перетащи сюда</span>
-              <span className="file-hint">{file ? file.name : 'MP4, MOV, AVI...'}</span>
+          <section className="tool-panel" id="tools" aria-label="Video tools">
+            <div className="panel-label">DROP YOUR SOURCE</div>
+            <label htmlFor="file-input" className="drop-zone">
+              <span className="drop-icon">+</span>
+              <span className="file-text">{file ? file.name : 'Choose a video to begin'}</span>
+              <span className="file-hint">MP4, MOV or AVI · up to 100 MB</span>
             </label>
-            <input
-              id="file-input"
-              type="file"
-              accept="video/*"
-              onChange={(event) => setFile(event.target.files?.[0] || null)}
-              className="file-input"
-            />
-          </div>
+            <input id="file-input" type="file" accept="video/*" onChange={(event) => setFile(event.target.files?.[0] || null)} className="file-input" />
+            <div className="tool-actions">
+              <button onClick={upload} disabled={!file} className="btn btn-primary">Analyze</button>
+              <button onClick={optimize} disabled={!file || isOptimizing} className="btn btn-success">{isOptimizing ? 'Working...' : 'Optimize'} <span>→</span></button>
+              <button onClick={boostFps} disabled={!file || isBoosting} className="btn btn-fps">{isBoosting ? 'Working...' : 'FPS Boost'}</button>
+            </div>
+          </section>
+        </main>
 
-          <div className="button-group">
-            <button
-              onClick={upload}
-              disabled={!file}
-              className="btn btn-primary"
-            >
-              Анализировать видео
-            </button>
-            <button
-              onClick={optimize}
-              disabled={!file || isOptimizing}
-              className="btn btn-success"
-            >
-              {isOptimizing ? 'Оптимизируем...' : 'Оптимизировать и скачать'}
-            </button>
-            <button
-              onClick={boostFps}
-              disabled={!file || isBoosting}
-              className="btn btn-fps"
-            >
-              {isBoosting ? 'Делаем плавнее...' : 'FPS BOOST'}
-            </button>
-          </div>
-        </div>
+        {error && <div className="error-box"><span className="error-icon">!</span><p>{error}</p></div>}
 
-        {error && (
-          <div className="error-box">
-            <span className="error-icon">⚠️</span>
-            <p>{error}</p>
-          </div>
-        )}
-
-        {result && (
-          <div className="results-section" id="results">
+        {result && <div className="results-section" id="results">
             <div className="metadata-card">
               <h3>📊 Параметры видео</h3>
               <div className="metadata-grid">
@@ -271,62 +250,8 @@ export default function App() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
-
-      <footer className="footer">
-        <div className="footer-content">
-          <div className="footer-section">
-            <h4>TikTok Video Optimizer</h4>
-            <p>Публичный инструмент для подготовки видео под TikTok с понятными рекомендациями и быстрым улучшением качества.</p>
-          </div>
-
-          <div className="footer-section">
-            <h4>Мои каналы</h4>
-            <div className="social-links">
-              <a
-                href="https://www.tiktok.com/@braxaep13"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link tiktok"
-                title="TikTok @braxaep13"
-              >
-                <span className="social-icon">🎵</span> @braxaep13
-              </a>
-              <a
-                href="https://www.tiktok.com/@braxelona"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link tiktok"
-                title="TikTok @braxelona"
-              >
-                <span className="social-icon">🎵</span> @braxelona
-              </a>
-              <a
-                href="https://youtube.com/@braxaep"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-link youtube"
-                title="YouTube @braxaep"
-              >
-                <span className="social-icon">▶️</span> @braxaep
-              </a>
-            </div>
-          </div>
-
-          <div className="footer-section">
-            <h4>Информация</h4>
-            <p>© 2026 TikTok Video Optimizer</p>
-            <p style={{ fontSize: '0.85rem', opacity: 0.7 }}>
-              Open Source • MIT License
-            </p>
-          </div>
+          </div>}
         </div>
-        <div className="footer-bottom">
-          <p>Сделано с ❤️ для создателей контента</p>
-        </div>
-      </footer>
-    </>
+      </div>
   );
 }
