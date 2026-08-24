@@ -134,25 +134,32 @@ export default function App() {
       <header className="header">
         <div className="header-content">
           <div className="logo-section">
-            <h1 className="logo">🎬 TikTok Video Optimizer</h1>
-            <p className="tagline">Оптимизируй видео для TikTok за 30 секунд</p>
+            <div>
+              <h1 className="logo">TikTok Video Optimizer</h1>
+              <p className="tagline">Video quality workspace</p>
+            </div>
+            <nav className="site-nav" aria-label="Основная навигация">
+              <a href="#workspace" className="site-nav-link active">Workspace</a>
+              <a href="#results" className="site-nav-link">Results</a>
+              <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="nav-login">Open site</a>
+            </nav>
           </div>
         </div>
       </header>
 
       <main className="container">
-        <div className="hero-section">
+        <div className="hero-section" id="workspace">
           <h2>Подготовь видео к публикации</h2>
           <p>Анализируем параметры видео и оптимизируем их для лучшего качества на TikTok, чтобы публикации выглядели аккуратно и профессионально.</p>
           <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className="social-link" style={{ marginTop: '12px', display: 'inline-flex' }}>
-            🌐 Открыть TikTokVideoOptimizer.com
+            Перейти к публичной странице
           </a>
         </div>
 
         <div className="upload-section">
           <div className="file-input-wrapper">
             <label htmlFor="file-input" className="file-label">
-              <span className="file-icon">📁</span>
+              <span className="file-icon" aria-hidden="true">+</span>
               <span className="file-text">Выбери видео или перетащи сюда</span>
               <span className="file-hint">{file ? file.name : 'MP4, MOV, AVI...'}</span>
             </label>
@@ -171,21 +178,21 @@ export default function App() {
               disabled={!file}
               className="btn btn-primary"
             >
-              ✨ Анализировать видео
+              Анализировать видео
             </button>
             <button
               onClick={optimize}
               disabled={!file || isOptimizing}
               className="btn btn-success"
             >
-              {isOptimizing ? '⏳ Оптимизируем...' : '🚀 Оптимизировать & Скачать'}
+              {isOptimizing ? 'Оптимизируем...' : 'Оптимизировать и скачать'}
             </button>
             <button
               onClick={boostFps}
               disabled={!file || isBoosting}
               className="btn btn-fps"
             >
-              {isBoosting ? '⏳ Делаем плавнее...' : '◌ FPS BOOST'}
+              {isBoosting ? 'Делаем плавнее...' : 'FPS BOOST'}
             </button>
           </div>
         </div>
@@ -198,7 +205,7 @@ export default function App() {
         )}
 
         {result && (
-          <div className="results-section">
+          <div className="results-section" id="results">
             <div className="metadata-card">
               <h3>📊 Параметры видео</h3>
               <div className="metadata-grid">
