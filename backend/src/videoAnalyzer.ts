@@ -328,6 +328,9 @@ export function boostVideoFps(filePath: string): Promise<string> {
         const outputOptions = [
           '-pix_fmt', 'yuv420p',
           '-movflags', '+faststart',
+          '-threads', '1',
+          '-filter_threads', '1',
+          '-filter_complex_threads', '1',
           '-b:a', '192k',
           '-ar', '48000'
         ];
@@ -341,7 +344,7 @@ export function boostVideoFps(filePath: string): Promise<string> {
         const command = ffmpeg(filePath)
           .videoCodec(selectedEncoder)
           .audioCodec('aac')
-          .videoFilters(`minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`)
+          .videoFilters(`scale=w=1080:h=1920:force_original_aspect_ratio=decrease,minterpolate=fps=${targetFps}:mi_mode=blend`)
           .outputOptions(outputOptions);
 
         command
