@@ -748,6 +748,8 @@ body {
 .btn-primary:hover:not(:disabled) { border-color: var(--green); background: #132018; box-shadow: none; }
 .btn-success { background: var(--green); color: #08110b; box-shadow: none; }
 .btn-success:hover:not(:disabled) { background: #8be2aa; box-shadow: 0 10px 28px rgba(101, 211, 145, 0.16); }
+.btn-fps { border-color: #526057; background: #171d19; color: #c8d4cb; }
+.btn-fps:hover:not(:disabled) { border-color: var(--green); background: #1d2b22; color: #f3f5f1; }
 
 .error-box { border-color: #633838; background: #211112; color: var(--danger); }
 .error-box p { color: var(--danger); }

@@ -289,3 +289,66 @@ export function optimizeVideo(filePath: string): Promise<string> {
     });
   });
 }
+
+export function boostVideoFps(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const tmpDir = path.dirname(filePath);
+    const outputPath = path.join(tmpDir, `brax-fps-boost-${Date.now()}.mp4`);
+
+    ffmpeg.getAvailableEncoders((encoderError: Error | null, encoders: Record<string, any>) => {
+      if (encoderError) {
+        return reject(encoderError);
+      }
+
+      const selectedEncoder = getBestVideoEncoder(encoders);
+
+      ffmpeg.ffprobe(filePath, (probeError: Error | null, metadata: any) => {
+        if (probeError) {
+          return reject(probeError);
+        }
+
+        const probeData = metadata as FFProbeData;
+        const videoStream = probeData.streams?.find((stream) => stream.codec_type === 'video');
+        const sourceFps = parseFps(videoStream?.avg_frame_rate);
+        if (!videoStream || sourceFps <= 0) {
+          return reject(new Error('Unable to determine source FPS'));
+        }
+
+        if (sourceFps >= 120) {
+          return ffmpeg(filePath)
+            .videoCodec('copy')
+            .audioCodec('copy')
+            .outputOptions(['-movflags', '+faststart'])
+            .on('end', () => resolve(outputPath))
+            .on('error', (error) => reject(error))
+            .save(outputPath);
+        }
+
+        const targetFps = sourceFps >= 50 ? 120 : Math.min(120, Math.max(60, Math.round(sourceFps * 2)));
+        const outputOptions = [
+          '-pix_fmt', 'yuv420p',
+          '-movflags', '+faststart',
+          '-b:a', '192k',
+          '-ar', '48000'
+        ];
+
+        if (selectedEncoder !== 'mpeg4') {
+          outputOptions.push('-preset', 'medium', '-crf', '18');
+        } else {
+          outputOptions.push('-q:v', '2');
+        }
+
+        const command = ffmpeg(filePath)
+          .videoCodec(selectedEncoder)
+          .audioCodec('aac')
+          .videoFilters(`minterpolate=fps=${targetFps}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`)
+          .outputOptions(outputOptions);
+
+        command
+          .on('end', () => resolve(outputPath))
+          .on('error', (error) => reject(error))
+          .save(outputPath);
+      });
+    });
+  });
+}

@@ -3,7 +3,7 @@ import express from 'express';
 import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
-import { analyzeVideo, optimizeVideo } from './videoAnalyzer';
+import { analyzeVideo, boostVideoFps, optimizeVideo } from './videoAnalyzer';
 
 const app = express();
 const tmpDir = path.join(__dirname, '../../tmp');
@@ -123,6 +123,38 @@ app.post('/api/optimize', upload.single('video'), async (req, res) => {
     console.error('Optimization failed:', error);
     const errorMessage = error instanceof Error ? error.message : 'Failed to optimize video';
     return res.status(500).json({ error: `Failed to optimize video: ${errorMessage}` });
+  }
+});
+
+app.post('/api/fps-boost', upload.single('video'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Video file is required' });
+  }
+
+  try {
+    const fileStats = fs.statSync(req.file.path);
+    if (fileStats.size === 0) {
+      return res.status(400).json({ error: 'Uploaded video is empty' });
+    }
+
+    const boostedPath = await boostVideoFps(req.file.path);
+    const cleanup = () => {
+      fs.unlink(req.file!.path, () => {});
+      fs.unlink(boostedPath, () => {});
+    };
+
+    res.on('finish', cleanup);
+    res.on('close', cleanup);
+
+    return res.download(boostedPath, 'brax-fps-boost.mp4', (downloadError) => {
+      if (downloadError) {
+        console.error('FPS boost download error:', downloadError);
+      }
+    });
+  } catch (error) {
+    console.error('FPS boost failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to boost FPS';
+    return res.status(500).json({ error: `Failed to boost FPS: ${errorMessage}` });
   }
 });
 

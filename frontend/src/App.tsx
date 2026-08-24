@@ -27,6 +27,7 @@ export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isBoosting, setIsBoosting] = useState(false);
 
   const apiBase = API_BASE_URL;
 
@@ -91,6 +92,43 @@ export default function App() {
     }
   };
 
+  const boostFps = async () => {
+    if (!file) return;
+
+    setError(null);
+    setIsBoosting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('video', file);
+
+      const response = await fetch(`${apiBase}/api/fps-boost`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const body = await response.json();
+        setError(body?.error || 'Ошибка FPS Boost');
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'brax-fps-boost.mp4';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Не удалось сделать видео плавнее');
+    } finally {
+      setIsBoosting(false);
+    }
+  };
+
   return (
     <>
       <header className="header">
@@ -141,6 +179,13 @@ export default function App() {
               className="btn btn-success"
             >
               {isOptimizing ? '⏳ Оптимизируем...' : '🚀 Оптимизировать & Скачать'}
+            </button>
+            <button
+              onClick={boostFps}
+              disabled={!file || isBoosting}
+              className="btn btn-fps"
+            >
+              {isBoosting ? '⏳ Делаем плавнее...' : '◌ FPS BOOST'}
             </button>
           </div>
         </div>
