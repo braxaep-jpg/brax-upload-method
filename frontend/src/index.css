@@ -660,3 +660,119 @@ button, input { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* Dark studio theme */
+:root {
+  color: #f3f5f1;
+  background: #080a09;
+  --ink: #f3f5f1;
+  --ink-soft: #929b94;
+  --paper: #111512;
+  --canvas: #080a09;
+  --line: #28302b;
+  --line-strong: #56645a;
+  --green: #65d391;
+  --green-dark: #3da86d;
+  --green-soft: #14251b;
+  --danger: #f08383;
+}
+
+body {
+  background:
+    radial-gradient(circle at 82% 0%, rgba(61, 168, 109, 0.12), transparent 28rem),
+    #080a09;
+  color: var(--ink);
+}
+
+.header {
+  position: relative;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(8, 10, 9, 0.88);
+}
+
+.header::after {
+  position: absolute;
+  right: 28px;
+  bottom: -1px;
+  width: 70px;
+  height: 2px;
+  background: var(--green);
+  content: '';
+}
+
+.header-content, .container, .footer-content { max-width: 1180px; }
+.logo-section h1.logo { color: var(--ink); font-size: clamp(1.2rem, 2.5vw, 1.65rem); letter-spacing: -0.045em; }
+.tagline { color: var(--green); font-size: 0.75rem; letter-spacing: 0.09em; text-transform: uppercase; }
+
+.container { padding: 82px 28px 40px; }
+.hero-section { max-width: 760px; margin-bottom: 34px; }
+.hero-section h2 { color: var(--ink); font-size: clamp(2.8rem, 7vw, 5.5rem); line-height: 0.94; }
+.hero-section p { max-width: 590px; color: var(--ink-soft); }
+.social-link { color: var(--green); }
+
+.upload-section {
+  position: relative;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #0e120f;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+}
+
+.upload-section::before {
+  display: block;
+  margin: 2px 0 18px;
+  color: #657168;
+  content: '01 / CHOOSE YOUR SOURCE';
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.file-label {
+  min-height: 210px;
+  border: 1px dashed #3d4c42;
+  border-radius: 11px;
+  background: #0a0d0b;
+}
+
+.file-label:hover, .file-input:focus + .file-label { border-color: var(--green); background: #101d15; }
+.file-icon { color: var(--green); }
+.file-text { color: var(--ink); }
+.file-hint { color: var(--ink-soft); }
+
+.button-group { align-items: center; justify-content: flex-end; padding-top: 4px; }
+.btn { min-height: 50px; padding: 13px 19px; border-radius: 9px; }
+.btn-primary { border-color: #374139; background: transparent; color: var(--ink); box-shadow: none; }
+.btn-primary:hover:not(:disabled) { border-color: var(--green); background: #132018; box-shadow: none; }
+.btn-success { background: var(--green); color: #08110b; box-shadow: none; }
+.btn-success:hover:not(:disabled) { background: #8be2aa; box-shadow: 0 10px 28px rgba(101, 211, 145, 0.16); }
+
+.error-box { border-color: #633838; background: #211112; color: var(--danger); }
+.error-box p { color: var(--danger); }
+.metadata-card, .issues-card, .recommendations-card { border-color: var(--line); background: #0e120f; }
+.metadata-card h3, .issues-card h3, .recommendations-card h3 { color: var(--ink); }
+.metadata-item, .rec-item { border-color: var(--line); background: #151a16; }
+.metadata-item .label, .rec-label { color: var(--ink-soft); }
+.metadata-item .value { color: var(--ink); }
+.issue-item { border-top-color: var(--line); color: #d9a0a0; }
+.rec-item { border-color: #28563b; background: var(--green-soft); }
+.rec-value { color: var(--green); }
+
+.footer { margin-top: 84px; border-top-color: var(--line); background: #0d100e; }
+.footer-section h4 { color: var(--ink); }
+.footer-section p, .footer .social-link { color: var(--ink-soft); }
+.footer-bottom { border-top-color: var(--line); color: #6f7b72; }
+.logo-section h1.logo { animation: none; }
+
+@media (max-width: 720px) {
+  .header { padding: 20px 16px; }
+  .header::after { right: 16px; }
+  .container { padding: 58px 16px 24px; }
+  .hero-section h2 { font-size: clamp(2.6rem, 14vw, 4rem); }
+  .upload-section { padding: 14px; }
+  .upload-section::before { margin: 2px 0 14px; }
+  .file-label { min-height: 190px; }
+  .button-group { align-items: stretch; }
+}
