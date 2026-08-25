@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './index.css';
 import { API_BASE_URL } from './config';
 
@@ -28,8 +28,43 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isBoosting, setIsBoosting] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   const apiBase = API_BASE_URL;
+
+  useEffect(() => {
+    setIsUnlocked(Boolean(window.localStorage.getItem('brax-access-token')));
+  }, []);
+
+  const accessHeaders = () => ({
+    'x-access-token': window.localStorage.getItem('brax-access-token') || ''
+  });
+
+  const unlockTools = async () => {
+    setIsUnlocking(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`${apiBase}/api/access/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offerId: 'zovi-bot-start-8096099859' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Unlock request failed');
+      }
+
+      const data = await response.json();
+      window.localStorage.setItem('brax-access-token', data.accessToken);
+      setIsUnlocked(true);
+    } catch {
+      setError('Не удалось подтвердить выполнение оффера. Попробуйте ещё раз.');
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
 
   const upload = async () => {
     if (!file) return;
@@ -42,6 +77,7 @@ export default function App() {
 
     const response = await fetch(`${apiBase}/api/analyze`, {
       method: 'POST',
+      headers: accessHeaders(),
       body: formData
     });
 
@@ -67,6 +103,7 @@ export default function App() {
 
       const response = await fetch(`${apiBase}/api/optimize`, {
         method: 'POST',
+        headers: accessHeaders(),
         body: formData
       });
 
@@ -104,6 +141,7 @@ export default function App() {
 
       const response = await fetch(`${apiBase}/api/fps-boost`, {
         method: 'POST',
+        headers: accessHeaders(),
         body: formData
       });
 
@@ -141,6 +179,23 @@ export default function App() {
       />
       <div className="video-overlay" />
       <div className="page-content">
+        {!isUnlocked && (
+          <div className="access-gate" role="dialog" aria-modal="true" aria-labelledby="access-title">
+            <div className="access-card">
+              <div className="access-kicker">ONE QUICK STEP</div>
+              <div className="access-lock">✦</div>
+              <h2 id="access-title">Unlock the tools</h2>
+              <p>Start the Telegram bot below, then return here and confirm. Analysis, optimization and FPS Boost unlock after confirmation.</p>
+              <a className="sponsor-button" href="https://t.me/zovi_bot?start=8096099859" target="_blank" rel="noopener noreferrer">
+                Open Telegram offer <span>↗</span>
+              </a>
+              <button className="confirm-button" onClick={unlockTools} disabled={isUnlocking}>
+                {isUnlocking ? 'Checking...' : 'I started the bot'}
+              </button>
+              <small>Telegram bot completion is currently confirmed manually until the offer provider supplies a verification callback.</small>
+            </div>
+          </div>
+        )}
         <nav className="top-nav" aria-label="Основная навигация">
           <div className="brand-pill">
             <span className="brand-mark">B</span>
@@ -154,7 +209,7 @@ export default function App() {
           </div>
         </nav>
 
-        <main className="hero-layout" id="workspace">
+        <main className={`hero-layout${isUnlocked ? '' : ' is-locked'}`} id="workspace" aria-hidden={!isUnlocked}>
           <div className="hero-copy">
             <a href="#tools" className="eyebrow-link">VIDEO QUALITY, REFINED <span>→</span></a>
             <h1>Make every frame<br />look <em>intentional.</em></h1>

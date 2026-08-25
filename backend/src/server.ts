@@ -1,4 +1,5 @@
 import cors from 'cors';
+import crypto from 'crypto';
 import express from 'express';
 import fs from 'fs';
 import multer from 'multer';
@@ -6,6 +7,8 @@ import path from 'path';
 import { analyzeVideo, boostVideoFps, optimizeVideo } from './videoAnalyzer';
 
 const app = express();
+const accessSecret = process.env.ACCESS_SECRET || crypto.randomBytes(32).toString('hex');
+const sponsorOfferId = 'zovi-bot-start-8096099859';
 const tmpDir = path.join(__dirname, '../../tmp');
 if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -53,6 +56,40 @@ app.use(cors({
 }));
 app.use(express.json());
 
+const createAccessToken = () => {
+  const payload = Buffer.from(JSON.stringify({
+    offerId: sponsorOfferId,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', accessSecret).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+};
+
+const hasValidAccessToken = (token?: string) => {
+  if (!token) return false;
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature) return false;
+
+  const expectedSignature = crypto.createHmac('sha256', accessSecret).update(payload).digest('base64url');
+  if (signature.length !== expectedSignature.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    return false;
+  }
+
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { offerId?: string; expiresAt?: number };
+    return data.offerId === sponsorOfferId && typeof data.expiresAt === 'number' && data.expiresAt > Date.now();
+  } catch {
+    return false;
+  }
+};
+
+const requireAccess = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (!hasValidAccessToken(req.header('x-access-token'))) {
+    return res.status(403).json({ error: 'Complete the sponsor offer to unlock tools' });
+  }
+  next();
+};
+
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
@@ -71,7 +108,14 @@ app.get('/', (req, res) => {
   });
 });
 
-app.post('/api/analyze', upload.single('video'), async (req, res) => {
+app.post('/api/access/unlock', (req, res) => {
+  if (req.body?.offerId !== sponsorOfferId) {
+    return res.status(400).json({ error: 'Unknown sponsor offer' });
+  }
+  return res.json({ accessToken: createAccessToken(), expiresIn: 24 * 60 * 60 });
+});
+
+app.post('/api/analyze', requireAccess, upload.single('video'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Video file is required' });
   }
@@ -91,7 +135,7 @@ app.post('/api/analyze', upload.single('video'), async (req, res) => {
   }
 });
 
-app.post('/api/optimize', upload.single('video'), async (req, res) => {
+app.post('/api/optimize', requireAccess, upload.single('video'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Video file is required' });
   }
@@ -126,7 +170,7 @@ app.post('/api/optimize', upload.single('video'), async (req, res) => {
   }
 });
 
-app.post('/api/fps-boost', upload.single('video'), async (req, res) => {
+app.post('/api/fps-boost', requireAccess, upload.single('video'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Video file is required' });
   }
@@ -158,7 +202,7 @@ app.post('/api/fps-boost', upload.single('video'), async (req, res) => {
   }
 });
 
-app.post('/api/optimize-json', express.json({ limit: '150mb' }), async (req, res) => {
+app.post('/api/optimize-json', requireAccess, express.json({ limit: '150mb' }), async (req, res) => {
   const { fileName, fileType, fileBase64 } = req.body || {};
 
   if (!fileBase64 || !fileName) {
