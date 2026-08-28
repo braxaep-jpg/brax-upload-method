@@ -8,7 +8,10 @@ import { analyzeVideo, boostVideoFps, optimizeVideo } from './videoAnalyzer';
 
 const app = express();
 const accessSecret = process.env.ACCESS_SECRET || crypto.randomBytes(32).toString('hex');
-const sponsorOfferId = 'zovi-bot-start-8096099859';
+const sponsorOfferIds = [
+  'zovi-bot-start-8096099859',
+  'honey-swap-bot-start-8342022'
+];
 const tmpDir = path.join(__dirname, '../../tmp');
 if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -58,7 +61,7 @@ app.use(express.json());
 
 const createAccessToken = () => {
   const payload = Buffer.from(JSON.stringify({
-    offerId: sponsorOfferId,
+    offerIds: sponsorOfferIds,
     expiresAt: Date.now() + 24 * 60 * 60 * 1000
   })).toString('base64url');
   const signature = crypto.createHmac('sha256', accessSecret).update(payload).digest('base64url');
@@ -76,8 +79,9 @@ const hasValidAccessToken = (token?: string) => {
   }
 
   try {
-    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { offerId?: string; expiresAt?: number };
-    return data.offerId === sponsorOfferId && typeof data.expiresAt === 'number' && data.expiresAt > Date.now();
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { offerIds?: string[]; expiresAt?: number };
+    const offerIds = data.offerIds;
+    return Array.isArray(offerIds) && sponsorOfferIds.every((offerId) => offerIds.includes(offerId)) && typeof data.expiresAt === 'number' && data.expiresAt > Date.now();
   } catch {
     return false;
   }
@@ -109,7 +113,8 @@ app.get('/', (req, res) => {
 });
 
 app.post('/api/access/unlock', (req, res) => {
-  if (req.body?.offerId !== sponsorOfferId) {
+  const completedOfferIds = Array.isArray(req.body?.completedOfferIds) ? req.body.completedOfferIds : [];
+  if (!sponsorOfferIds.every((offerId) => completedOfferIds.includes(offerId))) {
     return res.status(400).json({ error: 'Unknown sponsor offer' });
   }
   return res.json({ accessToken: createAccessToken(), expiresIn: 24 * 60 * 60 });

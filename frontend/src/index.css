@@ -154,8 +154,12 @@ body::before {
 .access-lock { display: grid; width: 50px; height: 50px; margin: 18px auto 15px; place-items: center; border: 1px solid rgba(139, 224, 166, 0.4); border-radius: 50%; color: var(--green); font-size: 1.3rem; }
 .access-card h2 { color: var(--white); font-family: 'Space Grotesk', sans-serif; font-size: 2rem; letter-spacing: -0.05em; }
 .access-card p { margin: 13px auto 21px; color: rgba(235, 242, 236, 0.7); font-size: 0.9rem; line-height: 1.55; }
+.offer-list { display: grid; gap: 8px; }
 .sponsor-button, .confirm-button { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; border-radius: 9px; font-size: 0.88rem; font-weight: 700; text-decoration: none; transition: transform 160ms ease, background 160ms ease, border-color 160ms ease; }
-.sponsor-button { gap: 9px; background: var(--green); color: #071009; }
+.sponsor-button { justify-content: space-between; gap: 10px; padding: 0 15px; background: var(--green); color: #071009; }
+.sponsor-button strong { flex: 1; text-align: left; }
+.sponsor-button.completed { background: rgba(139, 224, 166, 0.18); color: var(--green); }
+.sponsor-button.completed strong { color: var(--white); }
 .sponsor-button:hover { background: #b0edc0; transform: translateY(-1px); }
 .confirm-button { margin-top: 9px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.07); color: var(--white); cursor: pointer; }
 .confirm-button:hover:not(:disabled) { border-color: var(--green); background: rgba(139, 224, 166, 0.11); transform: translateY(-1px); }

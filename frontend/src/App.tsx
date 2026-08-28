@@ -22,6 +22,20 @@ interface AnalysisResult {
   };
 }
 
+const sponsorOffers = [
+  {
+    id: 'zovi-bot-start-8096099859',
+    label: 'Zovi bot',
+    url: 'https://t.me/zovi_bot?start=8096099859'
+  },
+  {
+    id: 'honey-swap-bot-start-8342022',
+    label: 'Honey Swap bot',
+    url: 'https://t.me/Honey_Swap_bot?start=8342022'
+  }
+];
+const accessTokenKey = 'brax-access-token-v2';
+
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -30,18 +44,26 @@ export default function App() {
   const [isBoosting, setIsBoosting] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [openedOfferIds, setOpenedOfferIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('brax-opened-offers') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   const apiBase = API_BASE_URL;
 
   useEffect(() => {
-    setIsUnlocked(Boolean(window.localStorage.getItem('brax-access-token')));
+    setIsUnlocked(Boolean(window.localStorage.getItem(accessTokenKey)));
   }, []);
 
   const accessHeaders = () => ({
-    'x-access-token': window.localStorage.getItem('brax-access-token') || ''
+    'x-access-token': window.localStorage.getItem(accessTokenKey) || ''
   });
 
   const unlockTools = async () => {
+    if (openedOfferIds.length !== sponsorOffers.length) return;
     setIsUnlocking(true);
     setError(null);
 
@@ -49,7 +71,7 @@ export default function App() {
       const response = await fetch(`${apiBase}/api/access/unlock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ offerId: 'zovi-bot-start-8096099859' })
+        body: JSON.stringify({ completedOfferIds: openedOfferIds })
       });
 
       if (!response.ok) {
@@ -57,13 +79,21 @@ export default function App() {
       }
 
       const data = await response.json();
-      window.localStorage.setItem('brax-access-token', data.accessToken);
+      window.localStorage.setItem(accessTokenKey, data.accessToken);
       setIsUnlocked(true);
     } catch {
       setError('Не удалось подтвердить выполнение оффера. Попробуйте ещё раз.');
     } finally {
       setIsUnlocking(false);
     }
+  };
+
+  const openOffer = (offerId: string) => {
+    setOpenedOfferIds((current) => {
+      const next = current.includes(offerId) ? current : [...current, offerId];
+      window.localStorage.setItem('brax-opened-offers', JSON.stringify(next));
+      return next;
+    });
   };
 
   const upload = async () => {
@@ -185,14 +215,27 @@ export default function App() {
               <div className="access-kicker">ONE QUICK STEP</div>
               <div className="access-lock">✦</div>
               <h2 id="access-title">Unlock the tools</h2>
-              <p>Start the Telegram bot below, then return here and confirm. Analysis, optimization and FPS Boost unlock after confirmation.</p>
-              <a className="sponsor-button" href="https://t.me/zovi_bot?start=8096099859" target="_blank" rel="noopener noreferrer">
-                Open Telegram offer <span>↗</span>
-              </a>
-              <button className="confirm-button" onClick={unlockTools} disabled={isUnlocking}>
-                {isUnlocking ? 'Checking...' : 'I started the bot'}
+              <p>Open both Telegram offers, press Start in each bot, then return here to unlock every tool.</p>
+              <div className="offer-list">
+                {sponsorOffers.map((offer, index) => (
+                  <a
+                    key={offer.id}
+                    className={`sponsor-button${openedOfferIds.includes(offer.id) ? ' completed' : ''}`}
+                    href={offer.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => openOffer(offer.id)}
+                  >
+                    <span>{openedOfferIds.includes(offer.id) ? 'Opened' : `Open offer ${index + 1}`}</span>
+                    <strong>{offer.label}</strong>
+                    <span>↗</span>
+                  </a>
+                ))}
+              </div>
+              <button className="confirm-button" onClick={unlockTools} disabled={isUnlocking || openedOfferIds.length !== sponsorOffers.length}>
+                {isUnlocking ? 'Checking...' : openedOfferIds.length === sponsorOffers.length ? 'I completed both offers' : `Open ${sponsorOffers.length - openedOfferIds.length} more offer`}
               </button>
-              <small>Telegram bot completion is currently confirmed manually until the offer provider supplies a verification callback.</small>
+              <small>We can confirm that both offers were opened. Automatic Start verification requires a callback from the offer providers.</small>
             </div>
           </div>
         )}
