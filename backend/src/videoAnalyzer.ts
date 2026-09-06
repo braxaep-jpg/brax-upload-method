@@ -2,13 +2,22 @@ import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import path from 'path';
 
-// If ffmpeg/ffprobe are not visible to the node process via PATH,
-// set explicit paths here. These are common install locations on this system.
+// Prefer deployment-provided paths, then keep the Windows development fallback.
+const configuredFfmpeg = process.env.FFMPEG_PATH;
+const configuredFfprobe = process.env.FFPROBE_PATH;
 const possibleFfmpeg = 'C:\\Program Files\\Topaz Labs LLC\\Topaz Video AI\\ffmpeg.exe';
 const possibleFfprobe = 'C:\\Program Files\\Topaz Labs LLC\\Topaz Video AI\\ffprobe.exe';
 try {
-  if (fs.existsSync(possibleFfmpeg)) ffmpeg.setFfmpegPath(possibleFfmpeg);
-  if (fs.existsSync(possibleFfprobe)) ffmpeg.setFfprobePath(possibleFfprobe);
+  if (configuredFfmpeg) {
+    ffmpeg.setFfmpegPath(configuredFfmpeg);
+  } else if (fs.existsSync(possibleFfmpeg)) {
+    ffmpeg.setFfmpegPath(possibleFfmpeg);
+  }
+  if (configuredFfprobe) {
+    ffmpeg.setFfprobePath(configuredFfprobe);
+  } else if (fs.existsSync(possibleFfprobe)) {
+    ffmpeg.setFfprobePath(possibleFfprobe);
+  }
 } catch (e) {
   // ignore; fluent-ffmpeg will fallback to searching PATH
 }

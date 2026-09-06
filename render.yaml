@@ -11,6 +11,10 @@ services:
         value: production
       - key: PORT
         value: "4000"
+      - key: FFMPEG_PATH
+        value: /usr/bin/ffmpeg
+      - key: FFPROBE_PATH
+        value: /usr/bin/ffprobe
       - key: ACCESS_SECRET
         generateValue: true
       - key: FRONTEND_ORIGIN
