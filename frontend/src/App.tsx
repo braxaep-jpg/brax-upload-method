@@ -22,7 +22,13 @@ interface AnalysisResult {
   };
 }
 
-const sponsorOffers = [
+interface SponsorOffer {
+  id: string;
+  label: string;
+  url: string;
+}
+
+const defaultSponsorOffers: SponsorOffer[] = [
   {
     id: 'zovi-bot-start-8096099859',
     label: 'Zovi bot',
@@ -52,7 +58,7 @@ const readStoredAccessToken = () => {
   return '';
 };
 
-const readOpenedOfferIds = () => {
+const readOpenedOfferIds = (offers: SponsorOffer[] = defaultSponsorOffers) => {
   try {
     const raw = window.localStorage.getItem(openedOffersKey);
     if (!raw) return [];
@@ -62,20 +68,16 @@ const readOpenedOfferIds = () => {
 
     return parsed
       .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-      .filter((value) => sponsorOffers.some((offer) => offer.id === value));
+      .filter((value) => offers.some((offer) => offer.id === value));
   } catch {
     return [];
   }
 };
 
-const persistOpenedOfferIds = (nextOfferIds: string[]) => {
-  const uniqueOfferIds = [...new Set(nextOfferIds.filter((id) => sponsorOffers.some((offer) => offer.id === id)))];
+const persistOpenedOfferIds = (nextOfferIds: string[], offers: SponsorOffer[]) => {
+  const uniqueOfferIds = [...new Set(nextOfferIds.filter((id) => offers.some((offer) => offer.id === id)))];
   window.localStorage.setItem(openedOffersKey, JSON.stringify(uniqueOfferIds));
   return uniqueOfferIds;
-};
-
-const isSponsorAccessUnlocked = () => {
-  return Boolean(readStoredAccessToken());
 };
 
 export default function App() {
@@ -86,16 +88,38 @@ export default function App() {
   const [isBoosting, setIsBoosting] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [sponsorOffers, setSponsorOffers] = useState<SponsorOffer[]>(defaultSponsorOffers);
   const [openedOfferIds, setOpenedOfferIds] = useState<string[]>(() => readOpenedOfferIds());
 
   const apiBase = API_BASE_URL;
   const allOffersCompleted = sponsorOffers.every((offer) => openedOfferIds.includes(offer.id));
 
   useEffect(() => {
-    const syncUnlockState = () => {
-      const nextOpenedOfferIds = readOpenedOfferIds();
-      setOpenedOfferIds(nextOpenedOfferIds);
-      setIsUnlocked(isSponsorAccessUnlocked());
+    let cancelled = false;
+
+    const syncUnlockState = async () => {
+      try {
+        const response = await fetch(`${apiBase}/api/access/status`, {
+          headers: { 'x-access-token': readStoredAccessToken() }
+        });
+        if (!response.ok) throw new Error('Access status request failed');
+
+        const data = await response.json();
+        const nextOffers = Array.isArray(data.offers) && data.offers.length > 0 ? data.offers : defaultSponsorOffers;
+        if (cancelled) return;
+
+        setSponsorOffers(nextOffers);
+        setOpenedOfferIds(readOpenedOfferIds(nextOffers));
+        setIsUnlocked(Boolean(data.unlocked));
+
+        if (!data.unlocked) {
+          window.localStorage.removeItem(accessTokenKey);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsUnlocked(false);
+        }
+      }
     };
 
     syncUnlockState();
@@ -107,8 +131,11 @@ export default function App() {
     };
 
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [allOffersCompleted]);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [apiBase]);
 
   const accessHeaders = () => ({
     'x-access-token': readStoredAccessToken()
@@ -121,7 +148,7 @@ export default function App() {
   };
 
   const unlockTools = async () => {
-    if (openedOfferIds.length !== sponsorOffers.length) return;
+    if (!allOffersCompleted) return;
     setIsUnlocking(true);
     setError(null);
 
@@ -138,9 +165,10 @@ export default function App() {
 
       const data = await response.json();
       const accessToken = data?.accessToken || '';
-      if (accessToken) {
-        window.localStorage.setItem(accessTokenKey, accessToken);
+      if (!accessToken) {
+        throw new Error('Access token was not returned');
       }
+      window.localStorage.setItem(accessTokenKey, accessToken);
       setIsUnlocked(true);
     } catch {
       setError('Не удалось подтвердить выполнение оффера. Попробуйте ещё раз.');
@@ -152,7 +180,7 @@ export default function App() {
   const openOffer = (offerId: string) => {
     setOpenedOfferIds((current) => {
       const next = current.includes(offerId) ? current : [...current, offerId];
-      return persistOpenedOfferIds(next);
+      return persistOpenedOfferIds(next, sponsorOffers);
     });
   };
 
@@ -304,8 +332,8 @@ export default function App() {
                   </a>
                 ))}
               </div>
-              <button className="confirm-button" onClick={unlockTools} disabled={isUnlocking || openedOfferIds.length !== sponsorOffers.length}>
-                {isUnlocking ? 'Checking...' : openedOfferIds.length === sponsorOffers.length ? 'I completed both offers' : `Open ${sponsorOffers.length - openedOfferIds.length} more offer`}
+              <button className="confirm-button" onClick={unlockTools} disabled={isUnlocking || !allOffersCompleted}>
+                {isUnlocking ? 'Checking...' : allOffersCompleted ? 'I completed both offers' : `Open ${sponsorOffers.length - openedOfferIds.length} more offer`}
               </button>
               <small>We can confirm that both offers were opened. Automatic Start verification requires a callback from the offer providers.</small>
             </div>

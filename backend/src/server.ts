@@ -8,10 +8,20 @@ import { analyzeVideo, boostVideoFps, optimizeVideo } from './videoAnalyzer';
 
 const app = express();
 const accessSecret = process.env.ACCESS_SECRET || crypto.randomBytes(32).toString('hex');
-const sponsorOfferIds = [
-  'zovi-bot-start-8096099859',
-  'honey-swap-bot-start-8342022'
+const sponsorOffers = [
+  {
+    id: 'zovi-bot-start-8096099859',
+    label: 'Zovi bot',
+    url: 'https://t.me/zovi_bot?start=8096099859'
+  },
+  {
+    id: 'honey-swap-bot-start-8342022',
+    label: 'Honey Swap bot',
+    url: 'https://t.me/Honey_Swap_bot?start=8342022'
+  }
 ];
+const sponsorOfferIds = sponsorOffers.map((offer) => offer.id);
+const accessTokenTtlSeconds = 30 * 24 * 60 * 60;
 const tmpDir = path.join(__dirname, '../../tmp');
 if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -63,7 +73,7 @@ app.use(express.json());
 const createAccessToken = () => {
   const payload = Buffer.from(JSON.stringify({
     offerIds: sponsorOfferIds,
-    expiresAt: Date.now() + 24 * 60 * 60 * 1000
+    expiresAt: Date.now() + accessTokenTtlSeconds * 1000
   })).toString('base64url');
   const signature = crypto.createHmac('sha256', accessSecret).update(payload).digest('base64url');
   return `${payload}.${signature}`;
@@ -118,7 +128,14 @@ app.post('/api/access/unlock', (req, res) => {
   if (!sponsorOfferIds.every((offerId) => completedOfferIds.includes(offerId))) {
     return res.status(400).json({ error: 'Unknown sponsor offer' });
   }
-  return res.json({ accessToken: createAccessToken(), expiresIn: 24 * 60 * 60 });
+  return res.json({ accessToken: createAccessToken(), expiresIn: accessTokenTtlSeconds });
+});
+
+app.get('/api/access/status', (req, res) => {
+  return res.json({
+    unlocked: hasValidAccessToken(req.header('x-access-token')),
+    offers: sponsorOffers
+  });
 });
 
 app.post('/api/analyze', requireAccess, upload.single('video'), async (req, res) => {
