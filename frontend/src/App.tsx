@@ -36,7 +36,6 @@ const sponsorOffers = [
 ];
 const accessTokenKey = 'brax-access-token-v2';
 const openedOffersKey = 'brax-opened-offers';
-const unlockFlagKey = 'brax-unlocked';
 const legacyAccessTokenKeys = ['brax-access-token', 'brax-access-token-v1'];
 
 const readStoredAccessToken = () => {
@@ -75,12 +74,8 @@ const persistOpenedOfferIds = (nextOfferIds: string[]) => {
   return uniqueOfferIds;
 };
 
-const isSponsorAccessUnlocked = (openedOfferIds: string[]) => {
-  const hasStoredToken = Boolean(readStoredAccessToken());
-  const hasLegacyUnlockFlag = window.localStorage.getItem(unlockFlagKey) === 'true';
-  const allOffersCompleted = sponsorOffers.every((offer) => openedOfferIds.includes(offer.id));
-
-  return hasStoredToken || hasLegacyUnlockFlag || allOffersCompleted;
+const isSponsorAccessUnlocked = () => {
+  return Boolean(readStoredAccessToken());
 };
 
 export default function App() {
@@ -100,13 +95,13 @@ export default function App() {
     const syncUnlockState = () => {
       const nextOpenedOfferIds = readOpenedOfferIds();
       setOpenedOfferIds(nextOpenedOfferIds);
-      setIsUnlocked(isSponsorAccessUnlocked(nextOpenedOfferIds));
+      setIsUnlocked(isSponsorAccessUnlocked());
     };
 
     syncUnlockState();
 
     const onStorage = (event: StorageEvent) => {
-      if (!event.key || [accessTokenKey, openedOffersKey, unlockFlagKey].includes(event.key)) {
+      if (!event.key || [accessTokenKey, openedOffersKey].includes(event.key)) {
         syncUnlockState();
       }
     };
@@ -140,7 +135,6 @@ export default function App() {
       if (accessToken) {
         window.localStorage.setItem(accessTokenKey, accessToken);
       }
-      window.localStorage.setItem(unlockFlagKey, 'true');
       setIsUnlocked(true);
     } catch {
       setError('Не удалось подтвердить выполнение оффера. Попробуйте ещё раз.');
