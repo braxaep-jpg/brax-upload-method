@@ -114,6 +114,12 @@ export default function App() {
     'x-access-token': readStoredAccessToken()
   });
 
+  const handleAccessDenied = () => {
+    window.localStorage.removeItem(accessTokenKey);
+    setIsUnlocked(false);
+    setError('Доступ истёк. Снова подтвердите выполнение офферов.');
+  };
+
   const unlockTools = async () => {
     if (openedOfferIds.length !== sponsorOffers.length) return;
     setIsUnlocking(true);
@@ -166,6 +172,10 @@ export default function App() {
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        handleAccessDenied();
+        return;
+      }
       const body = await response.json();
       setError(body?.error || 'Ошибка сервера');
       return;
@@ -192,6 +202,10 @@ export default function App() {
       });
 
       if (!response.ok) {
+        if (response.status === 403) {
+          handleAccessDenied();
+          return;
+        }
         const body = await response.json();
         setError(body?.error || 'Ошибка оптимизации');
         return;
@@ -230,6 +244,10 @@ export default function App() {
       });
 
       if (!response.ok) {
+        if (response.status === 403) {
+          handleAccessDenied();
+          return;
+        }
         const body = await response.json();
         setError(body?.error || 'Ошибка FPS Boost');
         return;
