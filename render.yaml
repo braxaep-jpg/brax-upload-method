@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: brax-video-optimizer
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: ACCESS_SECRET
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        value: https://brax-video-optimizer.onrender.com

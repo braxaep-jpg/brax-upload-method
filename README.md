@@ -45,23 +45,18 @@
 
 ## Публичный сайт
 
-- Фронтенд: `https://braxaep-jpg.github.io/brax-upload-method/`
-- API: `https://brax-upload-method-backend-production.up.railway.app`
+- Фронтенд и API: Render Web Service из `render.yaml`
 
-> Для публикации фронтенда используется GitHub Pages. Backend уже доступен на Railway по этому URL.
+> После публикации Render выдаст URL вида `https://brax-video-optimizer.onrender.com`.
 
-## Публичный backend
+## Публикация без собственного компьютера
 
-Для публичного backend я подготовил готовый GitHub Actions workflow на Railway. Вам нужно:
+1. Загрузите проект в GitHub.
+2. В Render выберите **New +** -> **Blueprint**.
+3. Выберите репозиторий и подтвердите `render.yaml`.
+4. Дождитесь завершения Docker-сборки.
 
-1. Зарегистрироваться на Railway бесплатно.
-2. Создать Railway Token в настройках аккаунта.
-3. В GitHub репозитории добавить секрет `RAILWAY_TOKEN`.
-4. В `.github/workflows/deploy-backend-railway.yml` будет настроен deploy при пуше в `main`.
-
-После этого backend будет доступен по домену Railway, например `https://<your-railway-service>.railway.app`.
-
-> Если хотите, можете использовать Render вместо Railway, но для этого потребуется отдельная настройка service и API key.
+После публикации ваш компьютер больше не участвует в работе сайта. Бесплатный Render может приостанавливать сервис после периода бездействия, поэтому первый запрос после паузы иногда выполняется медленнее.
 
 ## Руководство пользователя
 

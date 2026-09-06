@@ -35,6 +35,53 @@ const sponsorOffers = [
   }
 ];
 const accessTokenKey = 'brax-access-token-v2';
+const openedOffersKey = 'brax-opened-offers';
+const unlockFlagKey = 'brax-unlocked';
+const legacyAccessTokenKeys = ['brax-access-token', 'brax-access-token-v1'];
+
+const readStoredAccessToken = () => {
+  for (const key of [accessTokenKey, ...legacyAccessTokenKeys]) {
+    const value = window.localStorage.getItem(key);
+    if (value && value.trim()) {
+      if (key !== accessTokenKey) {
+        window.localStorage.setItem(accessTokenKey, value);
+      }
+      return value;
+    }
+  }
+
+  return '';
+};
+
+const readOpenedOfferIds = () => {
+  try {
+    const raw = window.localStorage.getItem(openedOffersKey);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .filter((value) => sponsorOffers.some((offer) => offer.id === value));
+  } catch {
+    return [];
+  }
+};
+
+const persistOpenedOfferIds = (nextOfferIds: string[]) => {
+  const uniqueOfferIds = [...new Set(nextOfferIds.filter((id) => sponsorOffers.some((offer) => offer.id === id)))];
+  window.localStorage.setItem(openedOffersKey, JSON.stringify(uniqueOfferIds));
+  return uniqueOfferIds;
+};
+
+const isSponsorAccessUnlocked = (openedOfferIds: string[]) => {
+  const hasStoredToken = Boolean(readStoredAccessToken());
+  const hasLegacyUnlockFlag = window.localStorage.getItem(unlockFlagKey) === 'true';
+  const allOffersCompleted = sponsorOffers.every((offer) => openedOfferIds.includes(offer.id));
+
+  return hasStoredToken || hasLegacyUnlockFlag || allOffersCompleted;
+};
 
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
@@ -44,22 +91,32 @@ export default function App() {
   const [isBoosting, setIsBoosting] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
-  const [openedOfferIds, setOpenedOfferIds] = useState<string[]>(() => {
-    try {
-      return JSON.parse(window.localStorage.getItem('brax-opened-offers') || '[]');
-    } catch {
-      return [];
-    }
-  });
+  const [openedOfferIds, setOpenedOfferIds] = useState<string[]>(() => readOpenedOfferIds());
 
   const apiBase = API_BASE_URL;
+  const allOffersCompleted = sponsorOffers.every((offer) => openedOfferIds.includes(offer.id));
 
   useEffect(() => {
-    setIsUnlocked(Boolean(window.localStorage.getItem(accessTokenKey)));
-  }, []);
+    const syncUnlockState = () => {
+      const nextOpenedOfferIds = readOpenedOfferIds();
+      setOpenedOfferIds(nextOpenedOfferIds);
+      setIsUnlocked(isSponsorAccessUnlocked(nextOpenedOfferIds));
+    };
+
+    syncUnlockState();
+
+    const onStorage = (event: StorageEvent) => {
+      if (!event.key || [accessTokenKey, openedOffersKey, unlockFlagKey].includes(event.key)) {
+        syncUnlockState();
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [allOffersCompleted]);
 
   const accessHeaders = () => ({
-    'x-access-token': window.localStorage.getItem(accessTokenKey) || ''
+    'x-access-token': readStoredAccessToken()
   });
 
   const unlockTools = async () => {
@@ -79,7 +136,11 @@ export default function App() {
       }
 
       const data = await response.json();
-      window.localStorage.setItem(accessTokenKey, data.accessToken);
+      const accessToken = data?.accessToken || '';
+      if (accessToken) {
+        window.localStorage.setItem(accessTokenKey, accessToken);
+      }
+      window.localStorage.setItem(unlockFlagKey, 'true');
       setIsUnlocked(true);
     } catch {
       setError('Не удалось подтвердить выполнение оффера. Попробуйте ещё раз.');
@@ -91,8 +152,7 @@ export default function App() {
   const openOffer = (offerId: string) => {
     setOpenedOfferIds((current) => {
       const next = current.includes(offerId) ? current : [...current, offerId];
-      window.localStorage.setItem('brax-opened-offers', JSON.stringify(next));
-      return next;
+      return persistOpenedOfferIds(next);
     });
   };
 

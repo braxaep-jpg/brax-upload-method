@@ -42,8 +42,7 @@ RUN npm install --production
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/frontend/dist ./frontend/dist
 
-# Expose ports
-EXPOSE 4000 5173
+EXPOSE 4000
 
 # Start backend
 CMD ["node", "backend/dist/server.js"]

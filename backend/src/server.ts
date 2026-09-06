@@ -46,6 +46,7 @@ app.use(cors({
 
     if (
       allowedOrigins.includes(origin) ||
+      origin.endsWith('.onrender.com') ||
       origin.endsWith('.tiktok.com') ||
       origin === 'https://tiktok.com' ||
       origin.startsWith('chrome-extension://')
