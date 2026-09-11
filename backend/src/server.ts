@@ -26,14 +26,20 @@ const tmpDir = path.join(__dirname, '../../tmp');
 if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
 }
+const videoExtensions = /\.(mp4|mov|avi|mkv|webm|wmv|mpeg|mpg|m4v|3gp|flv)$/i;
+
 const upload = multer({
   dest: tmpDir,
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('video/')) {
+    const isVideoMime = file.mimetype && file.mimetype.startsWith('video/');
+    const isVideoExtension = videoExtensions.test(file.originalname || '');
+
+    if (isVideoMime || isVideoExtension) {
       cb(null, true);
       return;
     }
+
     cb(new Error('Only video files are allowed'));
   }
 });
