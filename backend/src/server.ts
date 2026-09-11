@@ -20,6 +20,41 @@ const sponsorOffers = [
     url: 'https://t.me/Honey_Swap_bot?start=8342022'
   }
 ];
+const planCatalog = [
+  {
+    key: 'free',
+    name: 'Free',
+    price: '$0',
+    cadence: 'forever',
+    limit: '3 videos / week',
+    description: 'Perfect for testing the workflow and trying upload-safe quality presets.',
+    bestFor: 'Creators testing the platform'
+  },
+  {
+    key: 'starter',
+    name: 'Starter',
+    price: '$12',
+    cadence: 'month',
+    limit: '30 videos / month',
+    description: 'The first serious plan for creators who need consistent quality before publishing.',
+    bestFor: 'Daily creators and short-form teams',
+    highlight: true
+  },
+  {
+    key: 'pro',
+    name: 'Pro',
+    price: '$39',
+    cadence: 'month',
+    limit: '150 videos / month',
+    description: 'For heavy publishers, agencies and teams working across multiple social formats.',
+    bestFor: 'High-volume publishing workflows'
+  }
+];
+const referralRewards = [
+  { label: 'Invite friend', value: '+20 credits' },
+  { label: 'Friend upgrades', value: '+50 credits' },
+  { label: 'Monthly streak', value: '+10 credits' }
+];
 const sponsorOfferIds = sponsorOffers.map((offer) => offer.id);
 const accessTokenTtlSeconds = 30 * 24 * 60 * 60;
 const tmpDir = path.join(__dirname, '../../tmp');
@@ -141,6 +176,15 @@ app.get('/api/access/status', (req, res) => {
   return res.json({
     unlocked: hasValidAccessToken(req.header('x-access-token')),
     offers: sponsorOffers
+  });
+});
+
+app.get('/api/plans', (req, res) => {
+  return res.json({
+    plans: planCatalog,
+    referralRewards,
+    defaultCredits: 25,
+    freeLimit: '3 videos / week'
   });
 });
 
