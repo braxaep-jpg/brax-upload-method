@@ -26,34 +26,37 @@ const createBottomBadge = () => {
 
 const optimizeVideoFile = async (file) => {
   const config = await getConfig();
-
-  try {
-    const formData = new FormData();
-    formData.append('video', file, file.name);
-
-    const response = await fetch(`${config.backendUrl}/api/optimize`, {
-      method: 'POST',
-      body: formData,
-      mode: 'cors'
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => response.statusText || 'Unknown error');
-      throw new Error(`Backend error ${response.status}: ${text}`);
-    }
-
-    const optimizedBlob = await response.blob();
-    const optimizedName = file.name ? file.name.replace(/\.[^\.]+$/, '') + '-optimized.mp4' : `brax-optimized-${Date.now()}.mp4`;
-
-    return {
-      success: true,
-      blob: optimizedBlob,
-      filename: optimizedName,
-      message: 'Видео оптимизировано!'
-    };
-  } catch (error) {
-    return { success: false, message: `Ошибка оптимизации: ${error.message}` };
+  if (!config.accessToken) {
+    throw new Error('Сначала добавьте access token в настройках расширения.');
   }
+
+  const formData = new FormData();
+  formData.append('video', file, file.name);
+
+  const response = await fetch(`${config.backendUrl}/api/optimize`, {
+    method: 'POST',
+    headers: {
+      'x-access-token': config.accessToken,
+      'x-user-id': config.userId,
+      'x-plan': 'free',
+      'x-credits': '0'
+    },
+    body: formData,
+    mode: 'cors'
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.statusText || 'Unknown error');
+    throw new Error(`Backend error ${response.status}: ${text}`);
+  }
+
+  const optimizedBlob = await response.blob();
+  const optimizedName = file.name ? file.name.replace(/\.[^\.]+$/, '') + '-brax.mp4' : `brax-upload-${Date.now()}.mp4`;
+
+  return new File([optimizedBlob], optimizedName, {
+    type: 'video/mp4',
+    lastModified: Date.now()
+  });
 };
 
 const createUploadOverlay = (target) => {
@@ -80,8 +83,8 @@ const createUploadOverlay = (target) => {
       flex-direction: column;
       gap: 12px;
       width: 100%;
-      min-height: 160px;
-      padding: 20px;
+      min-height: 120px;
+      padding: 18px;
       border-radius: 24px;
       background: rgba(0, 0, 0, 0.92);
       box-shadow: 0 32px 90px rgba(0, 0, 0, 0.45);
@@ -142,15 +145,15 @@ const createUploadOverlay = (target) => {
 
   const title = document.createElement('div');
   title.className = 'brax-overlay-title';
-  title.textContent = 'Видео загружено';
+  title.textContent = 'Подготовка файла для TikTok';
 
   const description = document.createElement('div');
   description.className = 'brax-overlay-text';
-  description.textContent = 'Без потерь качества • высокий битрейт • TikTok-ready';
+  description.textContent = 'Brax подготовит выбранный файл перед передачей загрузчику.';
 
   const status = document.createElement('div');
   status.className = 'brax-overlay-text';
-  status.textContent = 'Нажмите «Оптимизировать», чтобы начать';
+  status.textContent = 'Оригинал пока не передан загрузчику TikTok.';
 
   const buttonContainer = document.createElement('div');
   buttonContainer.style.display = 'flex';
@@ -160,75 +163,8 @@ const createUploadOverlay = (target) => {
   const optimizeButton = document.createElement('button');
   optimizeButton.type = 'button';
   optimizeButton.className = 'brax-button';
-  optimizeButton.textContent = 'Оптимизировать';
-
-  let downloadUrl = null;
-  let downloadFilename = '';
-
-  const updateButtonAppearance = (success, text) => {
-    optimizeButton.textContent = text;
-    optimizeButton.disabled = false;
-    optimizeButton.style.background = success ? '#1de9b6' : '#ff4444';
-    optimizeButton.style.color = success ? '#08132d' : '#fff';
-    optimizeButton.style.boxShadow = success
-      ? '0 16px 40px rgba(28, 214, 134, 0.45)'
-      : '0 16px 40px rgba(255, 68, 68, 0.4)';
-  };
-
-  const runOptimization = async () => {
-    const file = target.files?.[0];
-    if (!file) return;
-
-    if (downloadUrl) {
-      window.URL.revokeObjectURL(downloadUrl);
-      downloadUrl = null;
-      downloadFilename = '';
-    }
-
-    optimizeButton.disabled = true;
-    optimizeButton.textContent = 'Оптимизируем...';
-    status.textContent = 'Связываемся с Brax API...';
-
-    const result = await optimizeVideoFile(file);
-
-    if (result.success && result.blob) {
-      status.textContent = 'Готово. Оптимизация завершена, загрузка началась.';
-      downloadUrl = window.URL.createObjectURL(result.blob);
-      downloadFilename = result.filename || file.name.replace(/\.[^\.]+$/, '') + '-optimized.mp4';
-      updateButtonAppearance(true, 'Скачать');
-
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = downloadFilename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } else {
-      status.textContent = result.message || 'Ошибка оптимизации';
-      updateButtonAppearance(false, 'Повторить');
-    }
-  };
-
-  optimizeButton.addEventListener('click', (event) => {
-    event.stopPropagation();
-    if (optimizeButton.disabled) return;
-
-    if (optimizeButton.textContent === 'Повторить' || optimizeButton.textContent === 'Оптимизировать') {
-      void runOptimization();
-      return;
-    }
-
-    if (optimizeButton.textContent === 'Скачать' && downloadUrl) {
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = downloadFilename || 'brax-optimized.mp4';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        a.remove();
-      }, 100);
-    }
-  });
+  optimizeButton.textContent = 'Подготавливаем…';
+  optimizeButton.disabled = true;
 
   const spinner = document.createElement('div');
   spinner.className = 'brax-spinner';
@@ -243,8 +179,7 @@ const createUploadOverlay = (target) => {
   shadow.append(style, overlay);
   document.body.appendChild(host);
 
-  void runOptimization();
-  return host;
+  return { host, status, optimizeButton };
 };
 
 const removeUploadOverlay = () => {
@@ -254,50 +189,64 @@ const removeUploadOverlay = () => {
   }
 };
 
+const preparedFiles = new WeakSet();
+const replayedInputs = new WeakSet();
+
 const handleFileChange = (event) => {
   const target = event.target;
   if (!target || target.type !== 'file') return;
 
   const input = target;
+  if (replayedInputs.has(input)) {
+    replayedInputs.delete(input);
+    return;
+  }
+
   if (!input.files?.length) {
     removeUploadOverlay();
     return;
   }
 
   const file = input.files[0];
-  if (!file.type.startsWith('video/')) {
+  if (!file.type.startsWith('video/') || preparedFiles.has(file)) {
     removeUploadOverlay();
     return;
   }
 
-  createUploadOverlay(input);
-};
+  event.stopImmediatePropagation();
+  const overlay = createUploadOverlay(input);
+  overlay.status.textContent = 'Подготавливаем выбранный файл…';
 
-const handleDragEvents = (event) => {
-  const isVideo = event.dataTransfer?.types?.contains?.('Files') || event.dataTransfer?.types?.includes?.('Files');
-  if (!isVideo) return;
-
-  const target = event.target;
-  if (!target || !(target instanceof HTMLElement)) return;
-
-  const uploadInput = document.querySelector('input[type="file"][accept*="video"]');
-  if (!uploadInput) return;
-
-  if (event.type === 'dragenter' || event.type === 'dragover') {
-    createUploadOverlay(uploadInput);
-  } else if (event.type === 'drop') {
-    createUploadOverlay(uploadInput);
-  }
+  void (async () => {
+    try {
+      const preparedFile = await optimizeVideoFile(file);
+      const transfer = new DataTransfer();
+      transfer.items.add(preparedFile);
+      input.files = transfer.files;
+      preparedFiles.add(preparedFile);
+      replayedInputs.add(input);
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      overlay.status.textContent = 'Подготовленный файл передан загрузчику TikTok. Проверьте предпросмотр перед публикацией.';
+      overlay.optimizeButton.textContent = 'Файл подготовлен';
+      overlay.optimizeButton.style.background = '#1de9b6';
+      overlay.optimizeButton.style.color = '#08132d';
+      overlay.optimizeButton.disabled = true;
+    } catch (error) {
+      replayedInputs.add(input);
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      overlay.status.textContent = `Не удалось подготовить файл; TikTok получил оригинал. ${error.message}`;
+      overlay.optimizeButton.textContent = 'Оригинал выбран';
+      overlay.optimizeButton.style.background = '#ffcc66';
+      overlay.optimizeButton.style.color = '#08132d';
+      overlay.optimizeButton.disabled = true;
+    }
+  })();
 };
 
 const startWatching = () => {
   createBottomBadge();
 
   document.addEventListener('change', handleFileChange, true);
-  document.addEventListener('dragenter', handleDragEvents, true);
-  document.addEventListener('dragover', handleDragEvents, true);
-  document.addEventListener('dragleave', handleDragEvents, true);
-  document.addEventListener('drop', handleDragEvents, true);
 
   const observer = new MutationObserver(() => {
     const inputs = Array.from(document.querySelectorAll('input[type="file"]'));

@@ -1,14 +1,20 @@
 const DEFAULT_CONFIG = {
-  backendUrl: 'https://api.tiktokvideooptimizer.com',
+  backendUrl: 'https://brax-video-optimizer.onrender.com',
   frontendUrl: 'https://tiktokvideooptimizer.com'
 };
 
 async function getConfig() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['braxBackendUrl', 'braxFrontendUrl'], (result) => {
+    chrome.storage.local.get(['braxBackendUrl', 'braxFrontendUrl', 'braxAccessToken', 'braxUserId'], (result) => {
+      const userId = result.braxUserId || `extension_${crypto.randomUUID()}`;
+      if (!result.braxUserId) {
+        chrome.storage.local.set({ braxUserId: userId });
+      }
       resolve({
         backendUrl: result.braxBackendUrl || DEFAULT_CONFIG.backendUrl,
-        frontendUrl: result.braxFrontendUrl || DEFAULT_CONFIG.frontendUrl
+        frontendUrl: result.braxFrontendUrl || DEFAULT_CONFIG.frontendUrl,
+        accessToken: result.braxAccessToken || '',
+        userId
       });
     });
   });

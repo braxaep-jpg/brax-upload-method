@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Brax Upload Method</title>
+    <style>
+      body { width: 320px; margin: 0; padding: 18px; background: #101410; color: #f4f6f3; font: 14px/1.45 system-ui, sans-serif; }
+      h1 { margin: 0 0 14px; font-size: 17px; }
+      label { display: block; margin: 12px 0 5px; color: #b9c3bb; font-size: 12px; }
+      input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid #435248; border-radius: 6px; background: #090c0a; color: #fff; }
+      button { width: 100%; margin-top: 14px; padding: 10px; border: 0; border-radius: 6px; background: #8be0a6; color: #101410; font-weight: 700; cursor: pointer; }
+      small { display: block; margin-top: 10px; color: #9ca59f; }
+      #status { min-height: 20px; margin-top: 10px; color: #8be0a6; }
+    </style>
+  </head>
+  <body>
+    <h1>Brax Upload Method</h1>
+    <label for="backend">Backend URL</label>
+    <input id="backend" type="url" autocomplete="url" placeholder="https://api.example.com">
+    <label for="token">Brax access token</label>
+    <input id="token" type="password" autocomplete="off" placeholder="Paste token from your Brax session">
+    <button id="save" type="button">Save settings</button>
+    <small>The token stays in this browser and is sent only to the configured Brax backend.</small>
+    <div id="status" role="status" aria-live="polite"></div>
+    <script src="popup.js"></script>
+  </body>
+</html>

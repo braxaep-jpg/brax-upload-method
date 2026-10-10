@@ -2,21 +2,15 @@ import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import path from 'path';
 
-// Prefer deployment-provided paths, then keep the Windows development fallback.
+// Prefer explicit deployment paths; otherwise let fluent-ffmpeg resolve binaries from PATH.
 const configuredFfmpeg = process.env.FFMPEG_PATH;
 const configuredFfprobe = process.env.FFPROBE_PATH;
-const possibleFfmpeg = 'C:\\Program Files\\Topaz Labs LLC\\Topaz Video AI\\ffmpeg.exe';
-const possibleFfprobe = 'C:\\Program Files\\Topaz Labs LLC\\Topaz Video AI\\ffprobe.exe';
 try {
   if (configuredFfmpeg) {
     ffmpeg.setFfmpegPath(configuredFfmpeg);
-  } else if (fs.existsSync(possibleFfmpeg)) {
-    ffmpeg.setFfmpegPath(possibleFfmpeg);
   }
   if (configuredFfprobe) {
     ffmpeg.setFfprobePath(configuredFfprobe);
-  } else if (fs.existsSync(possibleFfprobe)) {
-    ffmpeg.setFfprobePath(possibleFfprobe);
   }
 } catch (e) {
   // ignore; fluent-ffmpeg will fallback to searching PATH
@@ -140,31 +134,83 @@ const buildIssues = (stream: FFProbeStream, width: number, height: number, bitra
   return issues;
 };
 
-const buildOptimizationOptions = (encoder: string, bitrateKbps: number) => {
-  const options: string[] = [
-    '-pix_fmt', 'yuv420p',
-    '-movflags', '+faststart',
-    '-vf', 'scale=w=1080:h=1920:force_original_aspect_ratio=decrease',
-    '-r', '60',
-    '-b:v', `${bitrateKbps}k`,
-    '-maxrate', `${Math.ceil(bitrateKbps * 1.2)}k`,
-    '-bufsize', `${Math.ceil(bitrateKbps * 2)}k`,
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-ar', '48000'
-  ];
+const clampFps = (fps: number) => Math.min(60, Math.max(24, Math.round(fps || 30)));
 
-  const supportsProfile = /^(libx264|h264|hevc|h265)/.test(encoder);
-  if (encoder !== 'mpeg4') {
-    options.unshift('-preset', 'slow');
+const resolveTargetDimensions = (width: number, height: number) => {
+  const maxLongSide = 1920;
+  const maxShortSide = 1080;
+  const isPortrait = height > width;
+  const longSide = isPortrait ? height : width;
+  const shortSide = isPortrait ? width : height;
+  const scale = longSide > maxLongSide ? maxLongSide / longSide : 1;
+  const targetWidth = Math.max(720, Math.round(width * scale));
+  const targetHeight = Math.max(720, Math.round(height * scale));
+
+  if (isPortrait && targetHeight > maxShortSide) {
+    const portraitScale = maxShortSide / targetHeight;
+    return {
+      width: Math.max(720, Math.round(targetWidth * portraitScale)),
+      height: maxShortSide
+    };
   }
 
-  if (supportsProfile) {
-    options.push('-profile:v', 'high', '-level', '4.2');
+  if (!isPortrait && targetWidth > maxLongSide) {
+    const landscapeScale = maxLongSide / targetWidth;
+    return {
+      width: maxLongSide,
+      height: Math.max(720, Math.round(targetHeight * landscapeScale))
+    };
   }
 
-  return options;
+  return {
+    width: Math.min(width, targetWidth),
+    height: Math.min(height, targetHeight)
+  };
 };
+
+const buildQualityEncodeOptions = (targetWidth: number, targetHeight: number, targetFps: number) => [
+  '-preset', 'slow',
+  '-crf', '18',
+  '-pix_fmt', 'yuv420p',
+  '-profile:v', 'high',
+  '-level', '4.2',
+  '-movflags', '+faststart',
+  '-vf', `scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease`,
+  '-r', String(targetFps),
+  '-c:a', 'aac',
+  '-b:a', '192k',
+  '-ar', '48000'
+];
+
+const transcodeWithCodecFallback = (
+  filePath: string,
+  outputPath: string,
+  encodeOptions: string[],
+  primaryCodec = 'libx264',
+  fallbackCodec = 'mpeg4'
+) => new Promise<void>((resolve, reject) => {
+  const run = (codec: string) => {
+    if (fs.existsSync(outputPath)) {
+      fs.unlinkSync(outputPath);
+    }
+
+    ffmpeg(filePath)
+      .videoCodec(codec)
+      .audioCodec('aac')
+      .outputOptions(encodeOptions)
+      .on('end', () => resolve())
+      .on('error', (error) => {
+        if (codec !== fallbackCodec) {
+          run(fallbackCodec);
+          return;
+        }
+        reject(error);
+      })
+      .save(outputPath);
+  };
+
+  run(primaryCodec);
+});
 
 export function analyzeVideo(filePath: string): Promise<VideoAnalysisResult> {
   return new Promise((resolve, reject) => {
@@ -225,76 +271,27 @@ export function optimizeVideo(filePath: string): Promise<string> {
       fs.mkdirSync(tmpDir, { recursive: true });
     }
 
-    const buildReencodeOptions = (encoder: string) => {
-      const options: string[] = [
-        '-pix_fmt', 'yuv420p',
-        '-movflags', '+faststart',
-        '-c:a', 'aac',
-        '-b:a', '320k',
-        '-ar', '48000'
-      ];
-
-      if (encoder !== 'mpeg4') {
-        options.unshift('-preset', 'slow', '-crf', '18');
-      } else {
-        options.push('-q:v', '2');
+    ffmpeg.ffprobe(filePath, (err: Error | null, metadata: any) => {
+      if (err) {
+        return reject(err);
       }
 
-      if (/^(libx264|h264|hevc|h265)/.test(encoder)) {
-        options.push('-profile:v', 'high', '-level', '4.2');
+      const probeData = metadata as FFProbeData;
+      const videoStream = probeData.streams?.find((s: FFProbeStream) => s.codec_type === 'video');
+      if (!videoStream) {
+        return reject(new Error('Video stream not found for optimization'));
       }
 
-      return options;
-    };
+      const width = Number(videoStream.width || 0);
+      const height = Number(videoStream.height || 0);
+      const sourceFps = clampFps(parseFps(videoStream.avg_frame_rate));
+      const target = resolveTargetDimensions(width, height);
+      const targetFps = Math.min(60, Math.max(24, sourceFps));
+      const encodeOptions = buildQualityEncodeOptions(target.width, target.height, targetFps);
 
-    ffmpeg.getAvailableEncoders((encoderErr: Error | null, encoders: Record<string, any>) => {
-      if (encoderErr) {
-        return reject(encoderErr);
-      }
-
-      const selectedEncoder = getBestVideoEncoder(encoders);
-
-      ffmpeg.ffprobe(filePath, (err: Error | null, metadata: any) => {
-        if (err) {
-          return reject(err);
-        }
-
-        const probeData = metadata as FFProbeData;
-        const videoStream = probeData.streams?.find((s: FFProbeStream) => s.codec_type === 'video');
-        const audioStream = probeData.streams?.find((s: FFProbeStream) => s.codec_type === 'audio');
-        if (!videoStream) {
-          return reject(new Error('Video stream not found for optimization'));
-        }
-
-        const formatName = probeData.format?.format_name || '';
-        const videoCodec = videoStream.codec_name || '';
-        const audioCodec = audioStream?.codec_name || '';
-        const canStreamCopy = formatName.includes('mp4') && ['h264', 'h265', 'hevc'].includes(videoCodec) && (!audioStream || ['aac', 'mp3', 'mp2', 'pcm_s16le', 'pcm_s24le', 'pcm_f32le'].includes(audioCodec));
-
-        const command = ffmpeg(filePath).format('mp4').outputOptions(['-movflags', '+faststart']);
-
-        if (canStreamCopy) {
-          command.videoCodec('copy');
-          if (audioStream && ['aac', 'mp3', 'mp2', 'pcm_s16le', 'pcm_s24le', 'pcm_f32le'].includes(audioCodec)) {
-            command.audioCodec('copy');
-          } else {
-            command.audioCodec('aac').outputOptions(['-b:a', '320k', '-ar', '48000']);
-          }
-
-          return command
-            .on('end', () => resolve(outputPath))
-            .on('error', (err) => reject(err))
-            .save(outputPath);
-        }
-
-        command
-          .videoCodec(selectedEncoder)
-          .audioCodec('aac')
-          .outputOptions(buildReencodeOptions(selectedEncoder))
-          .on('end', () => resolve(outputPath))
-          .on('error', (err) => reject(err))
-          .save(outputPath);
-      });
+      transcodeWithCodecFallback(filePath, outputPath, encodeOptions)
+        .then(() => resolve(outputPath))
+        .catch((error) => reject(error));
     });
   });
 }
@@ -304,63 +301,39 @@ export function boostVideoFps(filePath: string): Promise<string> {
     const tmpDir = path.dirname(filePath);
     const outputPath = path.join(tmpDir, `brax-fps-boost-${Date.now()}.mp4`);
 
-    ffmpeg.getAvailableEncoders((encoderError: Error | null, encoders: Record<string, any>) => {
-      if (encoderError) {
-        return reject(encoderError);
+    ffmpeg.ffprobe(filePath, (probeError: Error | null, metadata: any) => {
+      if (probeError) {
+        return reject(probeError);
       }
 
-      const selectedEncoder = getBestVideoEncoder(encoders);
+      const probeData = metadata as FFProbeData;
+      const videoStream = probeData.streams?.find((stream) => stream.codec_type === 'video');
+      const sourceFps = parseFps(videoStream?.avg_frame_rate);
+      if (!videoStream || sourceFps <= 0) {
+        return reject(new Error('Unable to determine source FPS'));
+      }
 
-      ffmpeg.ffprobe(filePath, (probeError: Error | null, metadata: any) => {
-        if (probeError) {
-          return reject(probeError);
-        }
+      const targetFps = Math.min(60, Math.max(30, Math.round(sourceFps * 1.5)));
+      const width = Number(videoStream.width || 0);
+      const height = Number(videoStream.height || 0);
+      const target = resolveTargetDimensions(width, height);
+      const encodeOptions = [
+        '-preset', 'medium',
+        '-crf', '20',
+        '-pix_fmt', 'yuv420p',
+        '-profile:v', 'high',
+        '-level', '4.2',
+        '-movflags', '+faststart',
+        '-vf', `scale=${target.width}:${target.height}:force_original_aspect_ratio=decrease,minterpolate=fps=${targetFps}:mi_mode=blend`,
+        '-r', String(targetFps),
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-ar', '48000'
+      ];
 
-        const probeData = metadata as FFProbeData;
-        const videoStream = probeData.streams?.find((stream) => stream.codec_type === 'video');
-        const sourceFps = parseFps(videoStream?.avg_frame_rate);
-        if (!videoStream || sourceFps <= 0) {
-          return reject(new Error('Unable to determine source FPS'));
-        }
-
-        if (sourceFps >= 120) {
-          return ffmpeg(filePath)
-            .videoCodec('copy')
-            .audioCodec('copy')
-            .outputOptions(['-movflags', '+faststart'])
-            .on('end', () => resolve(outputPath))
-            .on('error', (error) => reject(error))
-            .save(outputPath);
-        }
-
-        const targetFps = sourceFps >= 50 ? 120 : Math.min(120, Math.max(60, Math.round(sourceFps * 2)));
-        const outputOptions = [
-          '-pix_fmt', 'yuv420p',
-          '-movflags', '+faststart',
-          '-threads', '1',
-          '-filter_threads', '1',
-          '-filter_complex_threads', '1',
-          '-b:a', '192k',
-          '-ar', '48000'
-        ];
-
-        if (selectedEncoder !== 'mpeg4') {
-          outputOptions.push('-preset', 'medium', '-crf', '18');
-        } else {
-          outputOptions.push('-q:v', '2');
-        }
-
-        const command = ffmpeg(filePath)
-          .videoCodec(selectedEncoder)
-          .audioCodec('aac')
-          .videoFilters(`scale=w=1080:h=1920:force_original_aspect_ratio=decrease,minterpolate=fps=${targetFps}:mi_mode=blend`)
-          .outputOptions(outputOptions);
-
-        command
-          .on('end', () => resolve(outputPath))
-          .on('error', (error) => reject(error))
-          .save(outputPath);
-      });
+      transcodeWithCodecFallback(filePath, outputPath, encodeOptions)
+        .then(() => resolve(outputPath))
+        .catch((error) => reject(error));
     });
   });
 }
